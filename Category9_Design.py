@@ -1,164 +1,306 @@
 # ============================================================
-# Category 9: Design Problems
-# Core pattern: combine multiple data structures for O(1) ops
+# Category 9: Design — BASE PROBLEMS + EXHAUSTIVE VARIANTS
+# Core pattern: Combine multiple data structures for O(1) ops
+# Key: Choose structures that enable fast access/update
 # ============================================================
 
-from collections import OrderedDict, defaultdict
+from collections import defaultdict, deque
+import heapq
 
-# O(1) time for all operations, O(capacity) space
+# ============================================================
+# PROBLEM 1: LRU CACHE
+# ============================================================
+# What it solves: Cache with limited size, evict least recently used
+# Structures: HashMap (O(1) access) + DoublyLinkedList (O(1) reorder)
+# Operations: get O(1), put O(1)
+# Interview angle: LFU? Time-based expiry? Multiple caches?
+
+# BASE: LRU Cache
 class LRUCache:
+    """Base: Least Recently Used cache with max size"""
     def __init__(self, capacity):
         self.capacity = capacity
         self.cache = {}
-        self.order = OrderedDict()
+        self.order = deque()
 
     def get(self, key):
+        """Get value, mark as recently used"""
         if key not in self.cache:
             return -1
-        self.order.move_to_end(key)
+        self.order.remove(key)
+        self.order.append(key)
         return self.cache[key]
 
     def put(self, key, value):
+        """Put key-value, evict LRU if full"""
+        if key in self.cache:
+            self.order.remove(key)
+        elif len(self.cache) == self.capacity:
+            lru = self.order.popleft()
+            del self.cache[lru]
+        self.cache[key] = value
+        self.order.append(key)
+
+# VARIANT 1A: LFU Cache (Least Frequently Used)
+class LFUCache:
+    """Variant A: Least Frequently Used cache"""
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.cache = {}
+        self.freq = defaultdict(int)
+        self.min_freq = 0
+        self.freq_to_keys = defaultdict(deque)
+
+    def get(self, key):
+        """Get value, increase frequency"""
+        if key not in self.cache:
+            return -1
+        self.freq[key] += 1
+        old_freq = self.freq[key] - 1
+        self.freq_to_keys[old_freq].remove(key)
+        if not self.freq_to_keys[old_freq] and old_freq == self.min_freq:
+            self.min_freq += 1
+        self.freq_to_keys[self.freq[key]].append(key)
+        return self.cache[key]
+
+    def put(self, key, value):
+        """Put key-value, evict LFU if full"""
+        if self.capacity <= 0:
+            return
         if key in self.cache:
             self.cache[key] = value
-            self.order.move_to_end(key)
-        else:
-            if len(self.cache) >= self.capacity:
-                oldest = self.order.popitem(last=False)
-                del self.cache[oldest[0]]
-            self.cache[key] = value
-            self.order[key] = True
+            self.get(key)
+            return
+        if len(self.cache) == self.capacity:
+            lfu = self.freq_to_keys[self.min_freq].popleft()
+            del self.cache[lfu]
+            del self.freq[lfu]
+        self.cache[key] = value
+        self.freq[key] = 1
+        self.min_freq = 1
+        self.freq_to_keys[1].append(key)
 
+# VARIANT 1B: Time-based expiry (TTL)
+class TTLCache:
+    """Variant B: cache with time-to-live expiration"""
+    def __init__(self, capacity, ttl_seconds):
+        self.capacity = capacity
+        self.ttl = ttl_seconds
+        self.cache = {}
+        self.expiry_time = {}
+        self.order = deque()
+
+    def get(self, key, current_time):
+        """Get if not expired"""
+        if key not in self.cache or self.expiry_time[key] < current_time:
+            return -1
+        self.order.remove(key)
+        self.order.append(key)
+        return self.cache[key]
+
+    def put(self, key, value, current_time):
+        """Put with TTL"""
+        if key in self.cache:
+            self.order.remove(key)
+        elif len(self.cache) == self.capacity:
+            lru = self.order.popleft()
+            del self.cache[lru]
+        self.cache[key] = value
+        self.expiry_time[key] = current_time + self.ttl
+        self.order.append(key)
+
+# VARIANT 1C: Multi-tier cache (L1 hot, L2 warm)
+class MultiTierCache:
+    """Variant C: multiple cache tiers (hot vs warm)"""
+    def __init__(self, l1_capacity, l2_capacity):
+        self.l1 = {}
+        self.l2 = {}
+        self.l1_cap = l1_capacity
+        self.l2_cap = l2_capacity
+        self.l1_order = deque()
+        self.l2_order = deque()
+
+    def get(self, key):
+        """Get from L1 (hot), move to front"""
+        if key in self.l1:
+            self.l1_order.remove(key)
+            self.l1_order.append(key)
+            return self.l1[key]
+        elif key in self.l2:
+            self.l2_order.remove(key)
+            self.l2_order.append(key)
+            # Move to L1
+            if len(self.l1) == self.l1_cap:
+                evicted = self.l1_order.popleft()
+                self.l2[evicted] = self.l1[evicted]
+                self.l2_order.append(evicted)
+            self.l1[key] = self.l2[key]
+            del self.l2[key]
+            self.l1_order.append(key)
+            return self.l1[key]
+        return -1
+
+    def put(self, key, value):
+        """Put in L1"""
+        if key in self.l1:
+            self.l1[key] = value
+            self.l1_order.remove(key)
+            self.l1_order.append(key)
+        else:
+            if len(self.l1) == self.l1_cap:
+                evicted = self.l1_order.popleft()
+                if len(self.l2) >= self.l2_cap:
+                    self.l2_order.popleft()
+                self.l2[evicted] = self.l1[evicted]
+                self.l2_order.append(evicted)
+            self.l1[key] = value
+            self.l1_order.append(key)
+
+print("=== PROBLEM 1: LRU CACHE ===")
 lru = LRUCache(2)
 lru.put(1, 1)
 lru.put(2, 2)
-print("LRUCache.get(1):", lru.get(1))
+print("Get 1:", lru.get(1))
 lru.put(3, 3)
-print("LRUCache.get(2) after eviction:", lru.get(2))
+print("Get 2 (should be -1 after evict):", lru.get(2))
+print()
 
 
-# O(1) time for all operations, O(n) space
+# ============================================================
+# PROBLEM 2: MINSTACK (Bonus: MaxStack, K-th Largest Stack)
+# ============================================================
+# What it solves: Stack with O(1) min/max retrieval
+# Strategy: Dual stack (values + mins/maxs)
+# Interview angle: Get K-th largest? Range queries?
+
+# BASE: MinStack
 class MinStack:
+    """Base: stack with O(1) min"""
     def __init__(self):
-        self.main = []
+        self.stack = []
         self.min_stack = []
 
-    def push(self, value):
-        self.main.append(value)
-        if not self.min_stack or value <= self.min_stack[-1]:
-            self.min_stack.append(value)
+    def push(self, val):
+        self.stack.append(val)
+        if not self.min_stack or val <= self.min_stack[-1]:
+            self.min_stack.append(val)
 
     def pop(self):
-        if self.main.pop() == self.min_stack[-1]:
+        val = self.stack.pop()
+        if val == self.min_stack[-1]:
             self.min_stack.pop()
+        return val
 
     def top(self):
-        return self.main[-1]
+        return self.stack[-1]
 
     def get_min(self):
         return self.min_stack[-1]
 
+# VARIANT 2A: MaxStack (dual min)
+class MaxStack:
+    """Variant A: stack with O(1) max"""
+    def __init__(self):
+        self.stack = []
+        self.max_stack = []
+
+    def push(self, val):
+        self.stack.append(val)
+        if not self.max_stack or val >= self.max_stack[-1]:
+            self.max_stack.append(val)
+
+    def pop(self):
+        val = self.stack.pop()
+        if val == self.max_stack[-1]:
+            self.max_stack.pop()
+        return val
+
+    def top(self):
+        return self.stack[-1]
+
+    def get_max(self):
+        return self.max_stack[-1]
+
+# VARIANT 2B: K-th largest in stack
+class KthLargestStack:
+    """Variant B: get K-th largest element"""
+    def __init__(self, k):
+        self.stack = []
+        self.k_largest = []
+        self.k = k
+
+    def push(self, val):
+        self.stack.append(val)
+        if len(self.k_largest) < self.k:
+            heapq.heappush(self.k_largest, val)
+        elif val > self.k_largest[0]:
+            heapq.heapreplace(self.k_largest, val)
+
+    def pop(self):
+        if self.stack:
+            return self.stack.pop()
+        return None
+
+    def get_kth_largest(self):
+        """Return k-th largest (or -1 if fewer than k elements)"""
+        return self.k_largest[0] if len(self.k_largest) == self.k else -1
+
+# VARIANT 2C: Range min/max
+class RangeStack:
+    """Variant C: query min/max in range [start, end]"""
+    def __init__(self):
+        self.stack = []
+
+    def push(self, val):
+        self.stack.append(val)
+
+    def pop(self):
+        if self.stack:
+            return self.stack.pop()
+        return None
+
+    def range_min(self, start, end):
+        """Min in range [start, end]"""
+        if start > end or end >= len(self.stack):
+            return None
+        return min(self.stack[start:end+1])
+
+    def range_max(self, start, end):
+        """Max in range [start, end]"""
+        if start > end or end >= len(self.stack):
+            return None
+        return max(self.stack[start:end+1])
+
+print("=== PROBLEM 2: MINSTACK ===")
 ms = MinStack()
 for v in [3, 1, 4, 1, 5]:
     ms.push(v)
-print("MinStack.get_min():", ms.get_min())
-print("MinStack.top():", ms.top())
+print("Top:", ms.top(), ", Min:", ms.get_min())
+print()
 
 
-# O(1) get/put amortized, O(k) space (k = distinct frequencies)
-class LFUCache:
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.key_value = {}
-        self.key_freq = {}
-        self.freq_keys = defaultdict(OrderedDict)
-        self.min_freq = 0
+# ============================================================
+# PROBLEM 3: UNION-FIND (DISJOINT SET UNION)
+# ============================================================
+# What it solves: Efficient find & union of elements into components
+# Use case: Connected components, cycle detection
+# Optimization: Path compression + union by rank → near O(1)
 
-    def get(self, key):
-        if key not in self.key_value:
-            return -1
-        self._bump_freq(key)
-        return self.key_value[key]
-
-    def put(self, key, value):
-        if self.capacity == 0:
-            return
-        if key in self.key_value:
-            self.key_value[key] = value
-            self._bump_freq(key)
-            return
-        if len(self.key_value) >= self.capacity:
-            evict_key, _ = self.freq_keys[self.min_freq].popitem(last=False)
-            del self.key_value[evict_key]
-            del self.key_freq[evict_key]
-        self.key_value[key] = value
-        self.key_freq[key] = 1
-        self.freq_keys[1][key] = True
-        self.min_freq = 1
-
-    def _bump_freq(self, key):
-        freq = self.key_freq[key]
-        del self.freq_keys[freq][key]
-        if not self.freq_keys[freq] and freq == self.min_freq:
-            self.min_freq += 1
-        new_freq = freq + 1
-        self.key_freq[key] = new_freq
-        self.freq_keys[new_freq][key] = True
-
-lfu = LFUCache(2)
-lfu.put(1, 1)
-lfu.put(2, 2)
-print("LFUCache.get(1):", lfu.get(1))
-lfu.put(3, 3)
-print("LFUCache.get(2) (evicted):", lfu.get(2))
-
-
-# O(1) average case, O(n) space
-class RandomizedSet:
-    def __init__(self):
-        self.elements = []
-        self.index_map = {}
-
-    def insert(self, value):
-        if value in self.index_map:
-            return False
-        self.index_map[value] = len(self.elements)
-        self.elements.append(value)
-        return True
-
-    def remove(self, value):
-        if value not in self.index_map:
-            return False
-        idx = self.index_map[value]
-        last = self.elements[-1]
-        self.elements[idx] = last
-        self.index_map[last] = idx
-        self.elements.pop()
-        del self.index_map[value]
-        return True
-
-    def get_random(self):
-        import random
-        return self.elements[random.randint(0, len(self.elements) - 1)]
-
-rs = RandomizedSet()
-print("RandomizedSet.insert(1):", rs.insert(1))
-print("RandomizedSet.insert(2):", rs.insert(2))
-print("RandomizedSet.get_random() (1 or 2):", rs.get_random())
-
-
-# O(1) average case for all ops, O(n) space
+# BASE: Union-Find with path compression
 class UnionFind:
+    """Base: union-find with path compression"""
     def __init__(self, n):
         self.parent = list(range(n))
         self.rank = [0] * n
 
     def find(self, x):
+        """Find root with path compression"""
         if self.parent[x] != x:
             self.parent[x] = self.find(self.parent[x])
         return self.parent[x]
 
     def union(self, x, y):
+        """Union by rank"""
         root_x, root_y = self.find(x), self.find(y)
         if root_x == root_y:
             return False
@@ -171,78 +313,129 @@ class UnionFind:
             self.rank[root_x] += 1
         return True
 
+    def connected(self, x, y):
+        """Check if in same component"""
+        return self.find(x) == self.find(y)
+
+# VARIANT 3A: Find connected components
+def find_components(uf, n):
+    """Variant A: return all connected components"""
+    components = defaultdict(list)
+    for i in range(n):
+        components[uf.find(i)].append(i)
+    return list(components.values())
+
+# VARIANT 3B: Detect cycle in graph
+def has_cycle_uf(edges):
+    """Variant B: detect cycle using union-find"""
+    uf = UnionFind(len(edges) + 1)
+    for u, v in edges:
+        if not uf.union(u, v):
+            return True
+    return False
+
+# VARIANT 3C: Component size tracking
+class UnionFindWithSize(UnionFind):
+    """Variant C: track size of each component"""
+    def __init__(self, n):
+        super().__init__(n)
+        self.size = [1] * n
+
+    def union(self, x, y):
+        root_x, root_y = self.find(x), self.find(y)
+        if root_x == root_y:
+            return False
+        if self.size[root_x] < self.size[root_y]:
+            self.parent[root_x] = root_y
+            self.size[root_y] += self.size[root_x]
+        else:
+            self.parent[root_y] = root_x
+            self.size[root_x] += self.size[root_y]
+        return True
+
+    def get_component_size(self, x):
+        return self.size[self.find(x)]
+
+print("=== PROBLEM 3: UNION-FIND ===")
 uf = UnionFind(5)
-print("UnionFind.union(0, 1):", uf.union(0, 1))
-print("UnionFind.union(1, 2):", uf.union(1, 2))
-print("UnionFind.find(0) == find(2):", uf.find(0) == uf.find(2))
+uf.union(0, 1)
+uf.union(2, 3)
+print("Connected 0 and 1:", uf.connected(0, 1))
+print("Connected 0 and 2:", uf.connected(0, 2))
+print()
 
 
-# O(log n) average for all ops, O(n) space
+# ============================================================
+# PROBLEM 4: MEDIAN FINDER
+# ============================================================
+# What it solves: Find median of stream of numbers
+# Strategy: Two heaps (max-heap for left, min-heap for right)
+
+# BASE: Median finder
 class MedianFinder:
+    """Base: find median of stream"""
     def __init__(self):
-        import heapq
-        self.small = []  # max heap (negate values)
-        self.large = []  # min heap
+        self.small = []  # max-heap (negate values)
+        self.large = []  # min-heap
         self.small_size = 0
         self.large_size = 0
 
     def addNum(self, num):
-        import heapq
-        if self.small_size == self.large_size:
-            if self.large and num > self.large[0]:
-                val = heapq.heappop(self.large)
-                heapq.heappush(self.small, -val)
-                heapq.heappush(self.large, num)
-            else:
-                heapq.heappush(self.small, -num)
+        if self.small_size == 0:
+            heapq.heappush(self.small, -num)
+            self.small_size += 1
+        elif num < -self.small[0]:
+            heapq.heappush(self.small, -num)
             self.small_size += 1
         else:
-            if num < -self.small[0]:
-                val = -heapq.heappop(self.small)
-                heapq.heappush(self.large, val)
-                heapq.heappush(self.small, -num)
-            else:
-                heapq.heappush(self.large, num)
+            heapq.heappush(self.large, num)
             self.large_size += 1
+
+        if self.small_size > self.large_size + 1:
+            heapq.heappush(self.large, -heapq.heappop(self.small))
+            self.small_size -= 1
+            self.large_size += 1
+        elif self.large_size > self.small_size:
+            heapq.heappush(self.small, -heapq.heappop(self.large))
+            self.small_size += 1
+            self.large_size -= 1
 
     def findMedian(self):
         if self.small_size > self.large_size:
             return float(-self.small[0])
-        return (-self.small[0] + self.large[0]) / 2.0
+        return (-self.small[0] + self.large[0]) / 2
 
+# VARIANT 4A: K-th percentile
+def kth_percentile(stream, k):
+    """Variant A: k-th percentile of stream"""
+    sorted_stream = sorted(stream)
+    idx = int(len(sorted_stream) * k / 100)
+    return sorted_stream[idx]
+
+# VARIANT 4B: Weighted median
+def weighted_median(values, weights):
+    """Variant B: median with weights"""
+    total = sum(weights)
+    sorted_pairs = sorted(zip(values, weights))
+    cumsum = 0
+    for val, w in sorted_pairs:
+        cumsum += w
+        if cumsum >= total / 2:
+            return val
+    return None
+
+print("=== PROBLEM 4: MEDIAN FINDER ===")
 mf = MedianFinder()
-for num in [1, 2]:
+for num in [1, 2, 3, 4, 5]:
     mf.addNum(num)
-print("MedianFinder median after [1, 2]:", mf.findMedian())
+print("Median:", mf.findMedian())
+print()
 
-
-# O(1) average case, O(capacity) space  [MIXED: design + multiset logic]
-class TimeBasedKeyValueStore:
-    def __init__(self):
-        self.store = {}
-
-    def set(self, key, value, timestamp):
-        if key not in self.store:
-            self.store[key] = []
-        self.store[key].append((timestamp, value))
-
-    def get(self, key, timestamp):
-        if key not in self.store:
-            return ""
-        values = self.store[key]
-        lo, hi = 0, len(values) - 1
-        result = ""
-        while lo <= hi:
-            mid = (lo + hi) // 2
-            if values[mid][0] <= timestamp:
-                result = values[mid][1]
-                lo = mid + 1
-            else:
-                hi = mid - 1
-        return result
-
-tbkv = TimeBasedKeyValueStore()
-tbkv.set("foo", "bar", 1)
-tbkv.set("foo", "bar2", 3)
-print("TimeBasedKeyValueStore.get('foo', 2):", tbkv.get("foo", 2))
-print("TimeBasedKeyValueStore.get('foo', 4):", tbkv.get("foo", 4))
+print("=" * 70)
+print("CATEGORY 9: DESIGN PATTERN MASTERY")
+print("=" * 70)
+print("Pattern 1: Hash + structure (LRU, LFU)")
+print("Pattern 2: Dual structures (min/max stack)")
+print("Pattern 3: Graph patterns (union-find)")
+print("Pattern 4: Stream processing (median finder)")
+print("=" * 70)

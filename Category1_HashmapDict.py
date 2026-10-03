@@ -1,28 +1,15 @@
 # ============================================================
-# Category 1: Hashmap / Dict Problems
-# Core pattern: "check + remember" via dict/set
+# Category 1: Hashmap / Dict — BASE PROBLEMS + VARIANTS
+# Core pattern: "check + remember" via dict/set for O(1) lookups
 # ============================================================
 
+# ============================================================
+# PROBLEM 1: TWO SUM
+# ============================================================
 
-# ---- PROBLEM 1: Two Sum ----
-# QUESTION:
-#   Given a list of numbers and a target sum, return ANY two numbers
-#   that add up to the target. Assume exactly one valid pair exists.
-#
-# EXPLANATION:
-#   This is the FOUNDATION of the "check + remember" pattern. Before
-#   hashing, you'd check every pair (O(n²)). With a hashmap:
-#   - As you loop through, compute what number would "complete" the pair
-#   - Check if that complement is already in your "seen" set
-#   - If yes, you found it. If no, remember THIS number for later.
-#
-# WHEN YOU'D SEE THIS:
-#   - Classic warm-up problem
-#   - Variants: two sum in sorted array (two-pointer), k-sum (nested loops)
-#   - Shows up as a sub-problem in many medium questions
-#
-# TIME/SPACE: O(n) time, O(n) space
+# BASE: Find any pair summing to target
 def two_sum(numbers, target):
+    """Base: return any one pair"""
     seen = {}
     for number in numbers:
         needed = target - number
@@ -31,181 +18,34 @@ def two_sum(numbers, target):
         seen[number] = True
     return None
 
-print("two_sum([2, 7, 11, 15], 9):", two_sum([2, 7, 11, 15], 9))
-print()
-
-
-# ---- PROBLEM 2: Contains Duplicate ----
-# QUESTION:
-#   Given a list of numbers, return True if any value appears more than
-#   once (a duplicate exists), False if all unique.
-#
-# EXPLANATION:
-#   This teaches the most basic "check + remember": as you scan through,
-#   check if you've already seen this number. If yes, it's a duplicate.
-#   If no, remember it. The hashset is a perfect tool because membership
-#   checking (`in seen`) is O(1).
-#   Compare to sorting (O(n log n)) or nested loop (O(n²)).
-#
-# WHEN YOU'D SEE THIS:
-#   - Standalone warm-up, OR
-#   - As part of a larger problem ("is there a duplicate within k positions?")
-#
-# TIME/SPACE: O(n) time, O(n) space
-def contains_duplicate(numbers):
+# VARIANT 1A: Count distinct pairs
+def count_pairs_summing_to(numbers, target):
+    """Variant A: count distinct pairs"""
     seen = set()
+    count = 0
     for number in numbers:
-        if number in seen:
-            return True
+        needed = target - number
+        if needed in seen and needed != number:
+            count += 1
         seen.add(number)
-    return False
+    return count
 
-print("contains_duplicate([1, 2, 3, 2]):", contains_duplicate([1, 2, 3, 2]))
-print()
-
-
-# ---- PROBLEM 3: Valid Anagram ----
-# QUESTION:
-#   Given two strings, return True if the second is an anagram of the first
-#   (same letters, same counts, any order). E.g., "listen" and "silent".
-#
-# EXPLANATION:
-#   Anagrams have matching letter counts. Build a frequency dict for the
-#   first string, then verify the second string "consumes" exactly those
-#   frequencies. This extends "check + remember" to counting.
-#   Alternative (cleaner) approach: sort both and compare, but that's O(n log n).
-#   Dictionary approach is O(n).
-#
-# WHEN YOU'D SEE THIS:
-#   - Standalone or as a helper in a larger problem
-#   - Often paired with "group all anagrams together" (Problem 4)
-#
-# TIME/SPACE: O(n + m) time, O(n) space
-def is_anagram(s, t):
-    if len(s) != len(t):
-        return False
-    counts_s = {}
-    for c in s:
-        counts_s[c] = counts_s.get(c, 0) + 1
-    for c in t:
-        if c not in counts_s:
-            return False
-        counts_s[c] -= 1
-        if counts_s[c] < 0:
-            return False
-    return True
-
-print("is_anagram('listen', 'silent'):", is_anagram('listen', 'silent'))
-print()
-
-
-# ---- PROBLEM 4: Group Anagrams ----
-# QUESTION:
-#   Given a list of strings, return groups of anagrams together.
-#   E.g., ['eat', 'tea', 'ate', 'nat', 'tan', 'bat'] → [['eat','tea','ate'], ['nat','tan'], ['bat']]
-#
-# EXPLANATION:
-#   The KEY insight: if two words are anagrams, they have the same SORTED
-#   form. Use sorted form as a hashmap key to group them. This combines
-#   "check + remember" with grouping.
-#   Example: sorted('listen') = 'eilnst', sorted('silent') = 'eilnst' → same key!
-#
-# WHEN YOU'D SEE THIS:
-#   - Common medium problem
-#   - Tests "use a hashmap as a grouper" pattern
-#
-# TIME/SPACE: O(n*k log k) time (k = avg word length, sorting dominates)
-#            O(n*k) space
-def group_anagrams(words):
-    groups = {}
-    for word in words:
-        key = ''.join(sorted(word))  # sorted form is the grouping key
-        if key not in groups:
-            groups[key] = []
-        groups[key].append(word)
-    return list(groups.values())
-
-print("group_anagrams(['eat', 'tea', 'ate', 'nat', 'tan']):", group_anagrams(['eat', 'tea', 'ate', 'nat', 'tan']))
-print()
-
-
-# ---- PROBLEM 5: Count All (Frequency Map) ----
-# QUESTION:
-#   Given a list of numbers, build a dictionary showing how many times
-#   each unique number appears.
-#   E.g., [1, 2, 2, 3, 2, 1] → {1: 2, 2: 3, 3: 1}
-#
-# EXPLANATION:
-#   This is the pure "accumulator" version of "check + remember".
-#   For each element, increment its count. The result is a frequency map
-#   used by many other problems (most_frequent, least_frequent, etc.).
-#
-# WHEN YOU'D SEE THIS:
-#   - Rarely standalone, but constantly as a helper function
-#   - Interview trick: "build this first, THEN answer the question"
-#
-# TIME/SPACE: O(n) time, O(k) space (k = distinct values)
-def count_all(numbers):
-    counts = {}
+# VARIANT 1B: Return all pairs
+def all_pairs_summing_to(numbers, target):
+    """Variant B: return all unique pairs"""
+    seen = set()
+    pairs = set()
     for number in numbers:
-        counts[number] = counts.get(number, 0) + 1
-    return counts
+        needed = target - number
+        if needed in seen:
+            pair = tuple(sorted([number, needed]))
+            pairs.add(pair)
+        seen.add(number)
+    return [list(p) for p in pairs]
 
-print("count_all([1, 2, 2, 3, 2, 1]):", count_all([1, 2, 2, 3, 2, 1]))
-print()
-
-
-# ---- PROBLEM 6: Most Frequent ----
-# QUESTION:
-#   Given a list of numbers, return the number that appears most often.
-#   (If tie, return any one.)
-#
-# EXPLANATION:
-#   Build the frequency map (Problem 5), then scan it for the highest count.
-#   This is a two-step pattern:
-#     Step 1: "check + remember" → build frequency dict
-#     Step 2: "best-so-far" → scan for the max
-#   Many interview problems use this two-step approach.
-#
-# WHEN YOU'D SEE THIS:
-#   - Warm-up or component of larger problems
-#   - Variant: "k most frequent" (use a heap)
-#
-# TIME/SPACE: O(n) time, O(n) space
-def most_frequent(numbers):
-    counts = count_all(numbers)
-    best_value = None
-    best_count = 0
-    for value, count in counts.items():
-        if count > best_count:
-            best_value = value
-            best_count = count
-    return best_value
-
-print("most_frequent([1, 2, 2, 3, 2, 1]):", most_frequent([1, 2, 2, 3, 2, 1]))
-print()
-
-
-# ---- PROBLEM 7: Two Sum (Sorted Array, Two-Pointer Variant) ----
-# QUESTION:
-#   Given a SORTED list of numbers and a target, return two numbers
-#   that sum to the target. (Same as Problem 1, but input is sorted.)
-#
-# EXPLANATION:
-#   When the array is SORTED, you can use TWO POINTERS instead of hashmap!
-#   Start with left at beginning, right at end:
-#     - If sum is too small, move left pointer right (increase sum)
-#     - If sum is too big, move right pointer left (decrease sum)
-#   This is O(n) time but O(1) space (no extra hashmap).
-#   KEY LEARNING: Sorting can enable different, sometimes better algorithms.
-#
-# WHEN YOU'D SEE THIS:
-#   - Follow-up to Problem 1: "your solution uses O(n) space.
-#     What if the array is sorted and you must use O(1) space?"
-#   - Teaches the "two-pointer" mindset (Category 3)
-#
-# TIME/SPACE: O(n) time, O(1) space (if you don't count the sort)
+# VARIANT 1C: Sorted array two-pointer
 def two_sum_sorted(numbers, target):
+    """Variant C: sorted array → two-pointer for O(1) space"""
     left, right = 0, len(numbers) - 1
     while left < right:
         s = numbers[left] + numbers[right]
@@ -217,96 +57,385 @@ def two_sum_sorted(numbers, target):
             right -= 1
     return None
 
-print("two_sum_sorted([2, 7, 11, 15], 9):", two_sum_sorted([2, 7, 11, 15], 9))
+print("=== PROBLEM 1: TWO SUM ===")
+print("BASE:", two_sum([2, 7, 11, 15], 9))
+print("VARIANT 1A:", count_pairs_summing_to([1, 5, 7, -1, 5], 6))
+print("VARIANT 1B:", all_pairs_summing_to([1, 0, -1, 0, -2, 2], 0))
+print("VARIANT 1C:", two_sum_sorted([2, 7, 11, 15], 9))
 print()
 
 
-# ---- PROBLEM 8: Has Pair Summing To ----
-# QUESTION:
-#   Given a list of numbers and a target, return True if ANY two numbers
-#   (distinct positions, but value can repeat) sum to the target.
-#   Return False if no such pair exists.
-#
-# EXPLANATION:
-#   This is "check + remember" with a boolean outcome instead of returning
-#   the pair. It's the same algorithm as Problem 1 but tests whether you
-#   can adapt the pattern to different return types.
-#   Also commonly phrased as "can we make the target?" or "does a pair exist?"
-#
-# WHEN YOU'D SEE THIS:
-#   - Slightly different framing than Problem 1 (True/False vs return the pair)
-#   - Tests "can you adapt the pattern?"
-#
-# TIME/SPACE: O(n) time, O(n) space
-def has_pair_summing_to(numbers, target):
+# ============================================================
+# PROBLEM 2: THREE SUM
+# ============================================================
+
+# BASE: Find all unique triplets summing to 0
+def three_sum(numbers):
+    """Base: return all unique triplets summing to 0"""
+    numbers.sort()
+    result = []
+    for i in range(len(numbers) - 2):
+        if i > 0 and numbers[i] == numbers[i - 1]:
+            continue
+        target = -numbers[i]
+        left, right = i + 1, len(numbers) - 1
+        while left < right:
+            s = numbers[left] + numbers[right]
+            if s == target:
+                result.append([numbers[i], numbers[left], numbers[right]])
+                while left < right and numbers[left] == numbers[left + 1]:
+                    left += 1
+                while left < right and numbers[right] == numbers[right - 1]:
+                    right -= 1
+                left += 1
+                right -= 1
+            elif s < target:
+                left += 1
+            else:
+                right -= 1
+    return result
+
+# VARIANT 2A: Four Sum
+def four_sum(numbers, target):
+    """Variant A: generalize to 4 numbers with custom target"""
+    numbers.sort()
+    result = []
+    n = len(numbers)
+    for i in range(n - 3):
+        if i > 0 and numbers[i] == numbers[i - 1]:
+            continue
+        for j in range(i + 1, n - 2):
+            if j > i + 1 and numbers[j] == numbers[j - 1]:
+                continue
+            left, right = j + 1, n - 1
+            while left < right:
+                s = numbers[i] + numbers[j] + numbers[left] + numbers[right]
+                if s == target:
+                    result.append([numbers[i], numbers[j], numbers[left], numbers[right]])
+                    while left < right and numbers[left] == numbers[left + 1]:
+                        left += 1
+                    while left < right and numbers[right] == numbers[right - 1]:
+                        right -= 1
+                    left += 1
+                    right -= 1
+                elif s < target:
+                    left += 1
+                else:
+                    right -= 1
+    return result
+
+# VARIANT 2B: Three Sum Closest
+def three_sum_closest(numbers, target):
+    """Variant B: find triplet CLOSEST to target, not exactly equal"""
+    numbers.sort()
+    best_sum = numbers[0] + numbers[1] + numbers[2]
+    for i in range(len(numbers) - 2):
+        left, right = i + 1, len(numbers) - 1
+        while left < right:
+            s = numbers[i] + numbers[left] + numbers[right]
+            if abs(s - target) < abs(best_sum - target):
+                best_sum = s
+            if s < target:
+                left += 1
+            else:
+                right -= 1
+    return best_sum
+
+print("=== PROBLEM 2: THREE SUM ===")
+print("BASE:", three_sum([-1, 0, 1, 2, -1, -4]))
+print("VARIANT 2A:", four_sum([1, 0, -1, 0, -2, 2], 0))
+print("VARIANT 2B:", three_sum_closest([-1, 2, 1, -4], 1))
+print()
+
+
+# ============================================================
+# PROBLEM 3: CONTAINS DUPLICATE
+# ============================================================
+
+# BASE: Any value appears twice?
+def contains_duplicate(numbers):
+    """Base: any duplicate?"""
     seen = set()
     for number in numbers:
-        needed = target - number
-        if needed in seen:
+        if number in seen:
             return True
         seen.add(number)
     return False
 
-print("has_pair_summing_to([20, 30, 15], 50):", has_pair_summing_to([20, 30, 15], 50))
+# VARIANT 3A: Duplicates within distance K
+def contains_duplicate_within_distance_k(numbers, k):
+    """Variant A: duplicates must be within distance k"""
+    seen = set()
+    for i, num in enumerate(numbers):
+        if num in seen:
+            return True
+        seen.add(num)
+        if len(seen) > k:
+            seen.remove(numbers[i - k])
+    return False
+
+# VARIANT 3B: First duplicate value
+def first_duplicate(numbers):
+    """Variant B: return first duplicate value, not boolean"""
+    seen = set()
+    for number in numbers:
+        if number in seen:
+            return number
+        seen.add(number)
+    return None
+
+# VARIANT 3C: All duplicate values
+def all_duplicates(numbers):
+    """Variant C: return all duplicate values"""
+    seen = set()
+    duplicates = set()
+    for number in numbers:
+        if number in seen:
+            duplicates.add(number)
+        seen.add(number)
+    return list(duplicates)
+
+print("=== PROBLEM 3: CONTAINS DUPLICATE ===")
+print("BASE:", contains_duplicate([1, 2, 3, 2]))
+print("VARIANT 3A:", contains_duplicate_within_distance_k([99, 99], 2))
+print("VARIANT 3B:", first_duplicate([4, 1, 2, 1, 3]))
+print("VARIANT 3C:", all_duplicates([4, 1, 2, 1, 3, 2]))
 print()
 
 
-# ---- PROBLEM 9: Common Elements (Set Intersection) ----
-# QUESTION:
-#   Given two lists, return a new list of elements that appear in BOTH lists.
-#   E.g., [1, 2, 3, 4] and [3, 4, 5, 6] → [3, 4]
-#
-# EXPLANATION:
-#   Use the first list to build a "seen" set. Then loop through the second
-#   list and collect anything that's in "seen". This is "check + remember"
-#   but specifically for finding intersection (common elements).
-#   Alternative: use Python's set intersection operator (`set(list1) & set(list2)`),
-#   but the manual approach teaches the pattern.
-#
-# WHEN YOU'D SEE THIS:
-#   - Warm-up or component of graph/matching problems
-#   - Variant: "unique common elements" (dedup the result)
-#
-# TIME/SPACE: O(n + m) time, O(min(n, m)) space
+# ============================================================
+# PROBLEM 4: COUNT ALL (Frequency Map)
+# ============================================================
+
+# BASE: Build frequency dict for all values
+def count_all(numbers):
+    """Base: frequency map of all values"""
+    counts = {}
+    for number in numbers:
+        counts[number] = counts.get(number, 0) + 1
+    return counts
+
+# VARIANT 4A: Count with minimum threshold
+def count_at_least_k(numbers, k):
+    """Variant A: only values appearing >= k times"""
+    counts = count_all(numbers)
+    return {v: c for v, c in counts.items() if c >= k}
+
+# VARIANT 4B: Top K frequent elements
+def top_k_frequent(numbers, k):
+    """Variant B: return K most frequent values"""
+    counts = count_all(numbers)
+    import heapq
+    return [v for v, _ in heapq.nlargest(k, counts.items(), key=lambda x: x[1])]
+
+# VARIANT 4C: Group by frequency
+def group_by_frequency(numbers):
+    """Variant C: group values by their frequency"""
+    counts = count_all(numbers)
+    freq_map = {}
+    for value, count in counts.items():
+        if count not in freq_map:
+            freq_map[count] = []
+        freq_map[count].append(value)
+    return freq_map
+
+print("=== PROBLEM 4: COUNT ALL ===")
+print("BASE:", count_all([1, 2, 2, 3, 2, 1]))
+print("VARIANT 4A:", count_at_least_k([1, 1, 2, 2, 2, 3], 2))
+print("VARIANT 4B:", top_k_frequent([1, 1, 1, 2, 2, 3], 2))
+print("VARIANT 4C:", group_by_frequency([1, 1, 1, 2, 2, 3]))
+print()
+
+
+# ============================================================
+# PROBLEM 5: GROUP ANAGRAMS
+# ============================================================
+
+# BASE: Group strings that are anagrams
+def group_anagrams(strings):
+    """Base: group strings that are anagrams"""
+    groups = {}
+    for s in strings:
+        key = ''.join(sorted(s))
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(s)
+    return list(groups.values())
+
+# VARIANT 5A: Return only groups with size >= K
+def group_anagrams_min_size(strings, k):
+    """Variant A: return only groups with size >= k"""
+    groups = {}
+    for s in strings:
+        key = ''.join(sorted(s))
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(s)
+    return [g for g in groups.values() if len(g) >= k]
+
+# VARIANT 5B: Find largest anagram group
+def largest_anagram_group(strings):
+    """Variant B: find largest anagram group"""
+    groups = {}
+    for s in strings:
+        key = ''.join(sorted(s))
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(s)
+    return max(groups.values(), key=len) if groups else []
+
+# VARIANT 5C: Count total anagram groups
+def count_anagram_groups(strings):
+    """Variant C: count total anagram groups"""
+    groups = {}
+    for s in strings:
+        key = ''.join(sorted(s))
+        if key not in groups:
+            groups[key] = 0
+        groups[key] += 1
+    return len(groups)
+
+print("=== PROBLEM 5: GROUP ANAGRAMS ===")
+print("BASE:", group_anagrams(['eat', 'tea', 'ate', 'tan', 'nat']))
+print("VARIANT 5A:", group_anagrams_min_size(['eat', 'tea', 'ate', 'tan'], 2))
+print("VARIANT 5B:", largest_anagram_group(['eat', 'tea', 'ate', 'tan', 'nat']))
+print("VARIANT 5C:", count_anagram_groups(['eat', 'tea', 'ate', 'tan', 'nat']))
+print()
+
+
+# ============================================================
+# PROBLEM 6: MOST/LEAST FREQUENT
+# ============================================================
+
+# BASE: Return value with highest count
+def most_frequent(numbers):
+    """Base: return value with highest count"""
+    counts = count_all(numbers)
+    return max(counts, key=counts.get)
+
+# VARIANT 6A: Return all values at max frequency
+def all_most_frequent(numbers):
+    """Variant A: return all values at max frequency"""
+    counts = count_all(numbers)
+    max_count = max(counts.values())
+    return [v for v, c in counts.items() if c == max_count]
+
+# VARIANT 6B: Top K frequencies
+def top_k_frequencies(numbers, k):
+    """Variant B: return top K frequencies"""
+    counts = count_all(numbers)
+    import heapq
+    return heapq.nlargest(k, set(counts.values()))
+
+# VARIANT 6C: Values with exact frequency F
+def values_with_frequency(numbers, f):
+    """Variant C: return values with exact frequency f"""
+    counts = count_all(numbers)
+    return [v for v, c in counts.items() if c == f]
+
+print("=== PROBLEM 6: MOST FREQUENT ===")
+print("BASE:", most_frequent([1, 1, 1, 2, 2, 3]))
+print("VARIANT 6A:", all_most_frequent([1, 1, 1, 2, 2, 3]))
+print("VARIANT 6B:", top_k_frequencies([1, 1, 1, 2, 2, 3], 2))
+print("VARIANT 6C:", values_with_frequency([1, 1, 1, 2, 2, 3], 2))
+print()
+
+
+# ============================================================
+# PROBLEM 7: COMMON ELEMENTS (Intersection)
+# ============================================================
+
+# BASE: Find intersection of two lists
 def common_elements(list1, list2):
-    seen = set(list1)
+    """Base: find intersection"""
+    set2 = set(list2)
+    return [x for x in list1 if x in set2]
+
+# VARIANT 7A: Union
+def union_elements(list1, list2):
+    """Variant A: find union"""
+    return list(set(list1) | set(list2))
+
+# VARIANT 7B: Symmetric difference
+def symmetric_difference(list1, list2):
+    """Variant B: find symmetric difference"""
+    set1, set2 = set(list1), set(list2)
+    return list(set1 ^ set2)
+
+# VARIANT 7C: Intersection with frequency
+def common_elements_freq(list1, list2):
+    """Variant C: intersection preserving frequency"""
+    count1 = count_all(list1)
+    count2 = count_all(list2)
     result = []
-    for number in list2:
-        if number in seen:
-            result.append(number)
+    for val in count1:
+        if val in count2:
+            result.extend([val] * min(count1[val], count2[val]))
     return result
 
-print("common_elements([1, 2, 3, 4], [3, 4, 5, 6]):", common_elements([1, 2, 3, 4], [3, 4, 5, 6]))
+print("=== PROBLEM 7: COMMON ELEMENTS ===")
+print("BASE:", common_elements([1, 2, 3, 4], [3, 4, 5, 6]))
+print("VARIANT 7A:", sorted(union_elements([1, 2, 3], [3, 4, 5])))
+print("VARIANT 7B:", sorted(symmetric_difference([1, 2, 3], [3, 4, 5])))
+print("VARIANT 7C:", sorted(common_elements_freq([1, 2, 2, 3], [2, 3, 3, 4])))
 print()
 
 
-# ---- PROBLEM 10: Least Frequent ----
-# QUESTION:
-#   Given a list of numbers, return the number that appears LEAST often
-#   (fewest times). (If tie, return any one.)
-#
-# EXPLANATION:
-#   This is the inverse of "most_frequent" (Problem 6). Same two-step pattern:
-#     Step 1: Build frequency map
-#     Step 2: Scan for the MINIMUM count
-#   The only difference is the comparison (`<` instead of `>`).
-#   GOTCHA: Initialize best_count to None, not 0, because some counts might
-#   be less than 0 (which shouldn't happen with frequencies, but the pattern
-#   shows up in other problems).
-#
-# WHEN YOU'D SEE THIS:
-#   - Parallel to "most_frequent"
-#   - Tests whether you can flip the comparison
-#
-# TIME/SPACE: O(n) time, O(n) space
-def least_frequent(numbers):
-    counts = count_all(numbers)
-    best_value = None
-    best_count = None
-    for value, count in counts.items():
-        if best_count is None or count < best_count:
-            best_value = value
-            best_count = count
-    return best_value
+# ============================================================
+# PROBLEM 8: IS ANAGRAM
+# ============================================================
 
-print("least_frequent([1, 1, 2, 3, 3, 3]):", least_frequent([1, 1, 2, 3, 3, 3]))
+# BASE: Check if two strings are anagrams
+def is_anagram(s1, s2):
+    """Base: check if two strings are anagrams"""
+    return sorted(s1) == sorted(s2)
+
+# VARIANT 8A: After removing K chars
+def is_anagram_after_removing_k(s1, s2, k):
+    """Variant A: anagrams after removing k chars"""
+    if abs(len(s1) - len(s2)) > k:
+        return False
+    count1 = count_all(list(s1))
+    count2 = count_all(list(s2))
+    diff = 0
+    for c in count1:
+        if count1[c] > count2.get(c, 0):
+            diff += count1[c] - count2.get(c, 0)
+    for c in count2:
+        if count2[c] > count1.get(c, 0):
+            diff += count2[c] - count1.get(c, 0)
+    return diff <= k
+
+# VARIANT 8B: Minimum chars to remove
+def min_chars_to_remove_for_anagram(s1, s2):
+    """Variant B: minimum chars to remove to make anagrams"""
+    count1 = count_all(list(s1))
+    count2 = count_all(list(s2))
+    total = len(s1) + len(s2)
+    for c in set(count1.keys()) | set(count2.keys()):
+        total -= 2 * min(count1.get(c, 0), count2.get(c, 0))
+    return total
+
+# VARIANT 8C: Anagrams by edits
+def min_edits_for_anagram(s1, s2):
+    """Variant C: minimum edits (insert/delete) to make anagrams"""
+    count1 = count_all(list(s1))
+    count2 = count_all(list(s2))
+    edits = 0
+    for c in set(count1.keys()) | set(count2.keys()):
+        edits += abs(count1.get(c, 0) - count2.get(c, 0))
+    return edits
+
+print("=== PROBLEM 8: IS ANAGRAM ===")
+print("BASE:", is_anagram('listen', 'silent'))
+print("VARIANT 8A:", is_anagram_after_removing_k('abcd', 'bd', 2))
+print("VARIANT 8B:", min_chars_to_remove_for_anagram('abcd', 'bd'))
+print("VARIANT 8C:", min_edits_for_anagram('abcd', 'bd'))
+print()
+
+print("=" * 60)
+print("CATEGORY 1: HASHMAP/DICT PATTERN MASTERY")
+print("=" * 60)
+print("Core: 'Check + Remember' — hashmap/set for O(1) lookups")
+print("Variants: output format, constraints, data structures")
+print("=" * 60)

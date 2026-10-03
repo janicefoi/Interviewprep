@@ -1,29 +1,15 @@
 # ============================================================
-# Category 2: Sliding Window Problems
-# Core pattern: maintain a window, expand/shrink as needed
+# Category 2: Sliding Window — BASE PROBLEMS + VARIANTS
+# Core pattern: maintain a window, expand/shrink based on constraint
 # ============================================================
 
+# ============================================================
+# PROBLEM 1: Max Sum Subarray (Fixed Window)
+# ============================================================
 
-# ---- PROBLEM 1: Max Sum Subarray (Fixed Window) ----
-# QUESTION:
-#   Given a list of numbers and a window size k, find the maximum sum
-#   of any k consecutive numbers.
-#   E.g., [2, 1, 5, 1, 3, 2] with k=3 → max is [5, 1, 3] = 9
-#
-# EXPLANATION:
-#   Brute force: compute the sum for every possible k-length window (O(n*k)).
-#   Sliding window trick: compute the first window's sum, then slide by
-#   removing the leftmost element and adding the new rightmost element.
-#   This amortizes to O(n) total.
-#   PATTERN: "window_sum += arr[right] - arr[left]" is the core move.
-#
-# WHEN YOU'D SEE THIS:
-#   - Very common in Datadog (monitoring over time windows)
-#   - Variants: max product subarray, minimum window
-#   - Often Question 2 material
-#
-# TIME/SPACE: O(n) time, O(1) space
+# BASE: Max sum of k consecutive elements
 def max_sum_subarray(numbers, k):
+    """Base: max sum of k consecutive elements"""
     window_sum = sum(numbers[:k])
     best = window_sum
     for i in range(k, len(numbers)):
@@ -31,104 +17,104 @@ def max_sum_subarray(numbers, k):
         best = max(best, window_sum)
     return best
 
-print("max_sum_subarray([2, 1, 5, 1, 3, 2], 3):", max_sum_subarray([2, 1, 5, 1, 3, 2], 3))
+# VARIANT 1A: Max product instead of sum
+def max_sum_subarray_product(numbers, k):
+    """Variant A: max PRODUCT instead of sum"""
+    window_prod = 1
+    for i in range(k):
+        window_prod *= numbers[i]
+    best = window_prod
+    for i in range(k, len(numbers)):
+        if numbers[i - k] != 0:
+            window_prod = (window_prod // numbers[i - k]) * numbers[i]
+        else:
+            window_prod = 1
+            for j in range(i - k + 1, i + 1):
+                window_prod *= numbers[j]
+        best = max(best, window_prod)
+    return best
+
+# VARIANT 1B: Count windows with sum >= threshold
+def count_subarray_sum_k(numbers, k):
+    """Variant B: COUNT how many k-windows have sum >= target"""
+    count = 0
+    target = sum(numbers[:k])
+    if target >= k:
+        count += 1
+    for i in range(k, len(numbers)):
+        s = sum(numbers[i-k+1:i+1])
+        if s >= k:
+            count += 1
+    return count
+
+# VARIANT 1C: Return all k-windows with sum >= target
+def all_subarrays_sum_k(numbers, k):
+    """Variant C: RETURN ALL k-windows with sum >= target"""
+    window_sum = sum(numbers[:k])
+    result = []
+    if window_sum >= k:
+        result.append(numbers[:k])
+    for i in range(k, len(numbers)):
+        window_sum += numbers[i] - numbers[i - k]
+        if window_sum >= k:
+            result.append(numbers[i-k+1:i+1])
+    return result
+
+print("=== PROBLEM 1: MAX SUM SUBARRAY ===")
+print("BASE:", max_sum_subarray([2, 1, 5, 1, 3, 2], 3))
+print("VARIANT 1A:", max_sum_subarray_product([2, 1, 5, 1, 3, 2], 3))
+print("VARIANT 1B:", count_subarray_sum_k([2, 1, 5, 1, 3, 2], 6))
+print("VARIANT 1C:", all_subarrays_sum_k([2, 1, 5, 1, 3, 2], 6))
 print()
 
 
-# ---- PROBLEM 2: Best Time to Buy and Sell Stock ----
-# QUESTION:
-#   Given daily stock prices, find the maximum profit from buying on one day
-#   and selling on a LATER day. Return 0 if no profit is possible.
-#   E.g., [7, 1, 5, 3, 6, 4] → buy at 1, sell at 6, profit = 5
-#
-# EXPLANATION:
-#   Don't think "window of fixed size". Instead: as you scan through prices,
-#   track the MINIMUM price seen so far (best buying opportunity up to now).
-#   For each current price, the profit is (current - min_so_far).
-#   Keep track of the best profit encountered.
-#   This is a "best-so-far" pattern, related to sliding window thinking.
-#   KEY: You can't sell before you buy (left pointer must be left of right pointer).
-#
-# WHEN YOU'D SEE THIS:
-#   - Very common warm-up
-#   - Variants: buy and sell multiple times, with cooldown/fee
-#   - Tests one-pass thinking
-#
-# TIME/SPACE: O(n) time, O(1) space
-def max_profit(prices):
-    if not prices:
-        return 0
-    min_price = prices[0]
-    best_profit = 0
-    for price in prices[1:]:
-        profit = price - min_price
-        best_profit = max(best_profit, profit)
-        min_price = min(min_price, price)
-    return best_profit
+# ============================================================
+# PROBLEM 2: Longest Substring Without Repeating
+# ============================================================
 
-print("max_profit([7, 1, 5, 3, 6, 4]):", max_profit([7, 1, 5, 3, 6, 4]))
-print()
-
-
-# ---- PROBLEM 3: Longest Substring Without Repeating Characters ----
-# QUESTION:
-#   Given a string, find the LENGTH of the longest substring with NO repeated
-#   characters. E.g., "abcabcbb" → "abc" has length 3
-#
-# EXPLANATION:
-#   This is a VARIABLE window problem. You want the window to be as long as
-#   possible while maintaining the constraint (no duplicates).
-#   ALGORITHM:
-#     - Expand right pointer to include a new character
-#     - If it creates a duplicate, shrink left pointer until the duplicate is gone
-#     - Track the maximum window size seen
-#   Use a dict to store the last-seen index of each character for quick checking.
-#   This is THE canonical variable window problem.
-#
-# WHEN YOU'D SEE THIS:
-#   - Very common medium problem
-#   - Variant: "at most k distinct characters" (same pattern, change the constraint)
-#   - Tests understanding of variable window vs fixed window
-#
-# TIME/SPACE: O(n) time, O(min(n, alphabet_size)) space
+# BASE: Length of longest substring with no repeats
 def length_of_longest_substring(s):
+    """Base: length of longest substring with no repeats"""
     last_seen = {}
     left = best = 0
     for right, char in enumerate(s):
         if char in last_seen and last_seen[char] >= left:
-            left = last_seen[char] + 1  # move left past the duplicate
+            left = last_seen[char] + 1
         last_seen[char] = right
         best = max(best, right - left + 1)
     return best
 
-print("length_of_longest_substring('abcabcbb'):", length_of_longest_substring('abcabcbb'))
-print()
+# VARIANT 2A: Longest with at least one repeat (inverse)
+def longest_substring_with_repeats(s):
+    """Variant A: longest with AT LEAST one repeat"""
+    if len(set(s)) == len(s):
+        return 0
+    last_seen = {}
+    left = 0
+    best = 0
+    for right, char in enumerate(s):
+        if char in last_seen:
+            best = max(best, right - left + 1)
+        last_seen[char] = right
+    return best
 
+# VARIANT 2B: Count substrings with no repeats
+def count_substrings_no_repeats(s):
+    """Variant B: COUNT how many substrings have no repeats"""
+    count = 0
+    n = len(s)
+    for i in range(n):
+        seen = set()
+        for j in range(i, n):
+            if s[j] in seen:
+                break
+            seen.add(s[j])
+            count += 1
+    return count
 
-# ---- PROBLEM 4: Longest Substring with At Most K Distinct Characters ----
-# QUESTION:
-#   Given a string and an integer k, find the length of the longest substring
-#   that contains AT MOST k distinct characters.
-#   E.g., "eceba" with k=2 → "ece" has length 3 (e and c only)
-#
-# EXPLANATION:
-#   Same sliding window idea as Problem 3, but the constraint changes:
-#   Instead of "no repeats", it's "at most k distinct".
-#   ALGORITHM:
-#     - Expand right to include a new character
-#     - Count how many distinct characters are in the window
-#     - If count > k, shrink left until count == k
-#     - Track maximum window size
-#   Use a dict to count character frequencies, delete when count hits 0.
-#   This is the direct generalization of Problem 3.
-#
-# WHEN YOU'D SEE THIS:
-#   - Medium-difficulty sliding window problem
-#   - Similar to Problem 3 but with a different constraint
-#   - Tests "how do I adapt this pattern to a new problem?"
-#
-# TIME/SPACE: O(n) time, O(k) space
+# VARIANT 2C: Longest with at most k distinct chars
 def longest_substring_k_distinct(s, k):
+    """Variant C: longest with AT MOST k distinct chars"""
     counts = {}
     left = best = 0
     for right, char in enumerate(s):
@@ -141,34 +127,21 @@ def longest_substring_k_distinct(s, k):
         best = max(best, right - left + 1)
     return best
 
-print("longest_substring_k_distinct('eceba', 2):", longest_substring_k_distinct('eceba', 2))
+print("=== PROBLEM 2: LONGEST SUBSTRING ===")
+print("BASE:", length_of_longest_substring('abcabcbb'))
+print("VARIANT 2A:", longest_substring_with_repeats('abcabcbb'))
+print("VARIANT 2B:", count_substrings_no_repeats('abc'))
+print("VARIANT 2C:", longest_substring_k_distinct('eceba', 2))
 print()
 
 
-# ---- PROBLEM 5: Shortest Error Burst (At-Least-Threshold) ----
-# QUESTION:
-#   Given a list of error counts per minute and a threshold, find the
-#   LENGTH of the SHORTEST contiguous window whose sum is AT LEAST the threshold.
-#   Return 0 if no window meets the threshold.
-#   E.g., [2, 3, 1, 2, 4, 3] with threshold=7 → [4, 3] sums to 7, length 2
-#
-# EXPLANATION:
-#   This is the "opposite" constraint from max_sum_subarray:
-#   Instead of "find max within fixed k", it's "find min size where sum >= threshold".
-#   ALGORITHM:
-#     - Expand right to grow the window sum
-#     - When sum >= threshold, shrink left to find the minimal window
-#     - Track the minimum window size that ever met the constraint
-#   KEY INSIGHT: The while loop shrinks aggressively. Once a window is valid,
-#   we want to shrink it as much as possible to find the TRUE minimum.
-#
-# WHEN YOU'D SEE THIS:
-#   - Medium sliding window problem (Datadog Question 2 from MockTest)
-#   - Tests understanding of when to shrink vs expand
-#   - "At least" threshold is common in real systems (SLA requirements)
-#
-# TIME/SPACE: O(n) time, O(1) space
+# ============================================================
+# PROBLEM 3: Shortest Window with Sum >= Threshold
+# ============================================================
+
+# BASE: Shortest window with sum >= threshold
 def shortest_burst(errors, threshold):
+    """Base: shortest window with sum >= threshold"""
     left = total = 0
     best = len(errors) + 1
     for right in range(len(errors)):
@@ -179,34 +152,60 @@ def shortest_burst(errors, threshold):
             left += 1
     return 0 if best == len(errors) + 1 else best
 
-print("shortest_burst([2, 3, 1, 2, 4, 3], 7):", shortest_burst([2, 3, 1, 2, 4, 3], 7))
+# VARIANT 3A: Window with sum exactly equal to target
+def shortest_burst_exact(errors, target):
+    """Variant A: window with sum EXACTLY equal to target"""
+    left = total = 0
+    best = len(errors) + 1
+    for right in range(len(errors)):
+        total += errors[right]
+        while total > target and left <= right:
+            total -= errors[left]
+            left += 1
+        if total == target:
+            best = min(best, right - left + 1)
+    return best if best != len(errors) + 1 else -1
+
+# VARIANT 3B: Count windows with sum >= threshold
+def count_burst_windows(errors, threshold):
+    """Variant B: COUNT how many windows sum >= threshold"""
+    count = 0
+    for i in range(len(errors)):
+        s = 0
+        for j in range(i, len(errors)):
+            s += errors[j]
+            if s >= threshold:
+                count += 1
+    return count
+
+# VARIANT 3C: Longest window with sum >= threshold
+def longest_burst(errors, threshold):
+    """Variant C: LONGEST window (inverse of shortest)"""
+    left = total = 0
+    best = 0
+    for right in range(len(errors)):
+        total += errors[right]
+        while total >= threshold:
+            best = max(best, right - left + 1)
+            total -= errors[left]
+            left += 1
+    return best
+
+print("=== PROBLEM 3: SHORTEST WINDOW ===")
+print("BASE:", shortest_burst([2, 3, 1, 2, 4, 3], 7))
+print("VARIANT 3A:", shortest_burst_exact([2, 3, 1, 2, 4, 3], 7))
+print("VARIANT 3B:", count_burst_windows([2, 3, 1, 2, 4, 3], 7))
+print("VARIANT 3C:", longest_burst([2, 3, 1, 2, 4, 3], 7))
 print()
 
 
-# ---- PROBLEM 6: Min Window Substring (Sliding Window + Hashmap) ----
-# QUESTION:
-#   Given two strings s and t, find the SHORTEST contiguous substring of s
-#   that contains all characters in t with the correct frequencies.
-#   E.g., s="ADOBECODEBANC", t="ABC" → "BANC" (length 4)
-#
-# EXPLANATION:
-#   This combines sliding window with hashmap (Category 1).
-#   ALGORITHM:
-#     1. Build a frequency map of t (what we NEED)
-#     2. Use two pointers on s; expand right to collect characters
-#     3. Track how many characters we still NEED; when it hits 0, we have a valid window
-#     4. Shrink left to minimize the window size
-#     5. Record the best (shortest) window found
-#   GOTCHA: You must check actual substring equality after window shrinking,
-#   because different substrings can have the same hash.
-#
-# WHEN YOU'D SEE THIS:
-#   - Hard sliding window problem (combines two techniques)
-#   - Real-world analog: "find the smallest service log that contains all required events"
-#   - Tests combination skills
-#
-# TIME/SPACE: O(n + m) time, O(alphabet_size) space
+# ============================================================
+# PROBLEM 4: Min Window Substring
+# ============================================================
+
+# BASE: Shortest substring containing all chars in t
 def min_window_substring(s, t):
+    """Base: shortest substring containing all chars in t"""
     if not t or not s:
         return ""
     need = {}
@@ -232,68 +231,189 @@ def min_window_substring(s, t):
             left += 1
     return "" if best is None else best
 
-print("min_window_substring('ADOBECODEBANC', 'ABC'):", min_window_substring('ADOBECODEBANC', 'ABC'))
+# VARIANT 4A: Return length instead of substring
+def min_window_length(s, t):
+    """Variant A: return LENGTH instead of substring"""
+    result = min_window_substring(s, t)
+    return len(result) if result else 0
+
+# VARIANT 4B: Return all valid windows
+def all_windows_containing(s, t):
+    """Variant B: return ALL valid windows"""
+    if not t or not s:
+        return []
+    need = {}
+    for c in t:
+        need[c] = need.get(c, 0) + 1
+    result = []
+    for i in range(len(s)):
+        have = {}
+        for j in range(i, len(s)):
+            if s[j] in need:
+                have[s[j]] = have.get(s[j], 0) + 1
+            if all(have.get(c, 0) >= need[c] for c in need):
+                result.append(s[i:j+1])
+                break
+    return result
+
+# VARIANT 4C: Count windows containing all chars
+def count_windows_containing(s, t):
+    """Variant C: COUNT how many windows contain all chars in t"""
+    count = 0
+    for i in range(len(s)):
+        have = {}
+        for j in range(i, len(s)):
+            if s[j] in t:
+                have[s[j]] = have.get(s[j], 0) + 1
+            if all(have.get(c, 0) >= t.count(c) for c in set(t)):
+                count += 1
+    return count
+
+print("=== PROBLEM 4: MIN WINDOW ===")
+print("BASE:", min_window_substring('ADOBECODEBANC', 'ABC'))
+print("VARIANT 4A:", min_window_length('ADOBECODEBANC', 'ABC'))
+print("VARIANT 4B:", all_windows_containing('ADOBECODEBANC', 'ABC'))
+print("VARIANT 4C:", count_windows_containing('ADOBECODEBANC', 'ABC'))
 print()
 
 
-# ---- PROBLEM 7: Longest Repeating Character Replacement ----
-# QUESTION:
-#   Given a string and an integer k, find the length of the longest substring
-#   where you can replace AT MOST k characters to make all characters the same.
-#   E.g., "ABAB" with k=2 → replace both B's with A, result is "AAAA", length 4
-#
-# EXPLANATION:
-#   Use sliding window. At each step:
-#     - Expand right to include a new character
-#     - Count frequencies of characters in the window
-#     - If (window_length - max_frequency) > k, we have too many "odd" characters
-#       to fix with k replacements, so shrink left
-#     - Track maximum valid window size
-#   The key insight: (window_length - max_frequency) tells you how many characters
-#   you'd need to replace to make everything match the most frequent character.
-#
-# WHEN YOU'D SEE THIS:
-#   - Medium-hard sliding window problem
-#   - Tests creative constraint interpretation
-#   - Real analog: "can we fix this data stream with k corrections?"
-#
-# TIME/SPACE: O(n) time, O(1) space (alphabet is bounded)
-def longest_repeating_char(s, k):
-    counts = {}
-    left = best = 0
-    for right, c in enumerate(s):
-        counts[c] = counts.get(c, 0) + 1
-        while right - left + 1 - max(counts.values()) > k:
-            counts[s[left]] -= 1
+# ============================================================
+# PROBLEM 5: Best Time to Buy and Sell Stock
+# ============================================================
+
+# BASE: Max profit from one buy-sell transaction
+def best_time_buy_sell(prices):
+    """Base: max profit from buy then sell"""
+    if not prices or len(prices) < 2:
+        return 0
+    min_price = prices[0]
+    max_profit = 0
+    for price in prices[1:]:
+        max_profit = max(max_profit, price - min_price)
+        min_price = min(min_price, price)
+    return max_profit
+
+# VARIANT 5A: Multiple transactions allowed
+def best_time_multiple_transactions(prices):
+    """Variant A: multiple buy-sell transactions allowed"""
+    if not prices or len(prices) < 2:
+        return 0
+    profit = 0
+    for i in range(1, len(prices)):
+        if prices[i] > prices[i-1]:
+            profit += prices[i] - prices[i-1]
+    return profit
+
+# VARIANT 5B: With cooldown (can't trade consecutive days)
+def best_time_with_cooldown(prices):
+    """Variant B: with cooldown between transactions"""
+    if not prices or len(prices) < 2:
+        return 0
+    n = len(prices)
+    buy = [-prices[0], -prices[0]]
+    sell = [0, 0]
+    for i in range(1, n):
+        buy[1] = max(buy[0], sell[0] - prices[i])
+        sell[1] = max(sell[0], buy[0] + prices[i])
+        buy[0], sell[0] = buy[1], sell[1]
+    return sell[1]
+
+# VARIANT 5C: With transaction fee
+def best_time_with_fee(prices, fee):
+    """Variant C: with transaction fee"""
+    if not prices or len(prices) < 2:
+        return 0
+    hold = -prices[0]
+    cash = 0
+    for price in prices[1:]:
+        hold = max(hold, cash - price)
+        cash = max(cash, hold + price - fee)
+    return cash
+
+print("=== PROBLEM 5: BEST TIME BUY/SELL ===")
+print("BASE:", best_time_buy_sell([7, 1, 5, 3, 6, 4]))
+print("VARIANT 5A:", best_time_multiple_transactions([7, 1, 5, 3, 6, 4]))
+print("VARIANT 5B:", best_time_with_cooldown([3, 3, 5, 0, 0, 3, 1, 4]))
+print("VARIANT 5C:", best_time_with_fee([1, 3, 2, 8, 4, 9], 2))
+print()
+
+
+# ============================================================
+# PROBLEM 6: Longest Repeating Character Replacement
+# ============================================================
+
+# BASE: Replace at most k chars to make all same
+def longest_repeating_character_replacement(s, k):
+    """Base: longest substring where replace <=k chars to make all same"""
+    count = {}
+    left = 0
+    best = 0
+    for right, char in enumerate(s):
+        count[char] = count.get(char, 0) + 1
+        window_len = right - left + 1
+        most_frequent = max(count.values())
+        chars_to_replace = window_len - most_frequent
+        if chars_to_replace > k:
+            count[s[left]] -= 1
             left += 1
-        best = max(best, right - left + 1)
+        else:
+            best = max(best, window_len)
     return best
 
-print("longest_repeating_char('ABAB', 2):", longest_repeating_char('ABAB', 2))
+# VARIANT 6A: Return the actual substring
+def longest_repeating_character_replacement_str(s, k):
+    """Variant A: return the actual substring (not length)"""
+    count = {}
+    left = 0
+    best_len = 0
+    best_start = 0
+    for right, char in enumerate(s):
+        count[char] = count.get(char, 0) + 1
+        window_len = right - left + 1
+        most_frequent = max(count.values()) if count else 0
+        chars_to_replace = window_len - most_frequent
+        if chars_to_replace > k:
+            count[s[left]] -= 1
+            left += 1
+        else:
+            if window_len > best_len:
+                best_len = window_len
+                best_start = left
+    return s[best_start:best_start + best_len]
+
+# VARIANT 6B: Minimum chars to replace (not maximum window)
+def min_chars_to_replace(s, k):
+    """Variant B: minimum chars to replace (inverse)"""
+    return len(s) - longest_repeating_character_replacement(s, k)
+
+# VARIANT 6C: Multiple target characters
+def longest_repeating_multi_target(s, k, targets):
+    """Variant C: multiple different target characters allowed"""
+    count = {}
+    left = 0
+    best = 0
+    for right, char in enumerate(s):
+        count[char] = count.get(char, 0) + 1
+        window_len = right - left + 1
+        most_frequent = max((count[c] for c in targets if c in count), default=0)
+        chars_to_replace = window_len - most_frequent
+        if chars_to_replace > k:
+            count[s[left]] -= 1
+            left += 1
+        else:
+            best = max(best, window_len)
+    return best
+
+print("=== PROBLEM 6: LONGEST REPEATING CHAR ===")
+print("BASE:", longest_repeating_character_replacement('ABAB', 2))
+print("VARIANT 6A:", longest_repeating_character_replacement_str('ABAB', 2))
+print("VARIANT 6B:", min_chars_to_replace('ABAB', 2))
+print("VARIANT 6C:", longest_repeating_multi_target('ABAB', 2, ['A', 'B']))
 print()
 
-
-# ---- PROBLEM 8: Valid Palindrome Substring (Simplified) ----
-# QUESTION:
-#   Given a string and a length k, check if ANY substring of length k
-#   is a palindrome. Return True if found, False otherwise.
-#   E.g., "abaca" with k=3 → "aba" at index 0 is a palindrome
-#
-# EXPLANATION:
-#   This is a simpler use of sliding window: just slide a fixed-size window
-#   and check each one for the palindrome property. Not the most efficient
-#   (expand-around-center in Category 3 is better), but tests sliding window pattern.
-#   KEY: This is a fixed-window (size k) problem, not variable.
-#
-# WHEN YOU'D SEE THIS:
-#   - Rare standalone; usually a sub-step in a larger problem
-#   - Tests "can you slide a window and check a property?"
-#
-# TIME/SPACE: O(n * k) time, O(1) space
-def is_valid_palindrome_substring(s, k):
-    for i in range(len(s) - k + 1):
-        if s[i:i+k] == s[i:i+k][::-1]:
-            return True
-    return False
-
-print("is_valid_palindrome_substring('abaca', 3):", is_valid_palindrome_substring('abaca', 3))
+print("=" * 60)
+print("CATEGORY 2: SLIDING WINDOW PATTERN MASTERY")
+print("=" * 60)
+print("Core: Fixed vs variable window, threshold-based vs exact")
+print("Variants: output format, constraint changes, direction")
+print("=" * 60)
